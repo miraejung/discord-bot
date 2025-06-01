@@ -7,7 +7,7 @@ import sys
 
 # ▶ 환경 변수로 토큰 불러오기
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-if not TOKEN:
+if TOKEN is None:
     print("❗ 환경 변수 DISCORD_BOT_TOKEN이 설정되지 않았습니다.")
     sys.exit(1)
 
