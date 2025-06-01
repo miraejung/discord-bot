@@ -3,30 +3,17 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import time
-import json
 import sys
 
-# ▶ 토큰 불러오기 (input() 제거)
-def load_token():
-    config_path = "config.json"
-    if not os.path.exists(config_path):
-        print("❗ config.json 파일을 찾을 수 없습니다. 다음과 같은 형식으로 파일을 만들어 주세요:")
-        print('   { "token": "YOUR_DISCORD_BOT_TOKEN" }')
-        sys.exit(1)
+# ▶ 환경 변수로 토큰 불러오기
+TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+if not TOKEN:
+    print("❗ 환경 변수 DISCORD_BOT_TOKEN이 설정되지 않았습니다.")
+    sys.exit(1)
 
-    try:
-        with open(config_path, "r") as f:
-            data = json.load(f)
-            token = data.get("token")
-            if not token:
-                raise KeyError
-            return token
-    except (json.JSONDecodeError, KeyError):
-        print("❗ config.json 파일이 올바른 형식이 아닙니다. 다음 예시를 참고하세요:")
-        print('   { "token": "YOUR_DISCORD_BOT_TOKEN" }')
-        sys.exit(1)
-
-TOKEN = load_token()
+# ▶ (선택) 디버그용: 읽어온 토큰 정보 확인
+print(f"🔍 읽어온 토큰(repr): {repr(TOKEN)}")
+print(f"🔢 토큰 길이: {len(TOKEN)} 자")
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -36,7 +23,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 # 구인 명령어를 허용할 텍스트 채널 ID 목록
 ALLOWED_TEXT_CHANNEL_IDS = [
-    758040017439293501,  # 필요 시 여기에 채널 ID를 추가
+    758040017439293501,  # 필요 시 채널 ID를 추가
 ]
 
 # 쿨타임 저장용 딕셔너리
@@ -64,7 +51,7 @@ async def on_ready():
 
 @bot.tree.command(name="구인", description="현재 음성 채널 기준으로 구인 공고를 작성합니다.")
 @app_commands.describe(description="설명")
-@app_commands.rename(description="설명")  # 한글로 파라미터 보이게
+@app_commands.rename(description="설명")
 async def recruit(interaction: discord.Interaction, description: str):
     MAXIMUM = 4
     user_id = interaction.user.id
