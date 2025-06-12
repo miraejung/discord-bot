@@ -11,7 +11,6 @@ if TOKEN is None:
     print("❗ 환경 변수 DISCORD_BOT_TOKEN이 설정되지 않았습니다.")
     sys.exit(1)
 
-# ▶ (선택) 디버그용: 읽어온 토큰 정보 확인
 print(f"🔍 읽어온 토큰(repr): {repr(TOKEN)}")
 print(f"🔢 토큰 길이: {len(TOKEN)} 자")
 
@@ -21,12 +20,11 @@ intents.voice_states = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# 구인 명령어를 허용할 텍스트 채널 ID 목록
+# 허용된 텍스트 채널 ID 목록
 ALLOWED_TEXT_CHANNEL_IDS = [
-    758040017439293501,  # 필요 시 채널 ID를 추가
+    758040017439293501,  # 필요시 텍스트 채널 ID 수정
 ]
 
-# 쿨타임 저장용 딕셔너리
 cooldowns = {}
 
 class RecruitView(discord.ui.View):
@@ -53,11 +51,9 @@ async def on_ready():
 @app_commands.describe(description="설명")
 @app_commands.rename(description="설명")
 async def recruit(interaction: discord.Interaction, description: str):
-    MAXIMUM = 4
     user_id = interaction.user.id
     now = time.time()
 
-    # 허용된 텍스트 채널에서만 명령어 사용 가능
     if interaction.channel.id not in ALLOWED_TEXT_CHANNEL_IDS:
         await interaction.response.send_message(
             "❗ 이 명령어는 지정된 텍스트 채널에서만 사용할 수 있습니다.",
@@ -65,7 +61,6 @@ async def recruit(interaction: discord.Interaction, description: str):
         )
         return
 
-    # 쿨타임 체크 (60초)
     if user_id in cooldowns and now - cooldowns[user_id] < 60:
         remain = int(60 - (now - cooldowns[user_id]))
         await interaction.response.send_message(
@@ -74,7 +69,6 @@ async def recruit(interaction: discord.Interaction, description: str):
         )
         return
 
-    # 유저가 음성 채널에 접속했는지 확인
     voice_state = interaction.user.voice
     if not voice_state or not voice_state.channel:
         await interaction.response.send_message(
@@ -84,24 +78,22 @@ async def recruit(interaction: discord.Interaction, description: str):
         return
 
     voice_channel = voice_state.channel
-    # 봇을 제외한 실제 유저만 카운트
     members = [m for m in voice_channel.members if not m.bot]
     current_count = len(members)
 
-    # 최대 인원 초과 시
-    if current_count > MAXIMUM:
+    # 음성 채널 최대 인원 수 확인 (없으면 99로 설정)
+    max_limit = voice_channel.user_limit if voice_channel.user_limit != 0 else 99
+
+    if current_count > max_limit:
         await interaction.response.send_message(
-            f"❗ 현재 인원 수가 최대 인원({MAXIMUM}명)을 초과했습니다. ({current_count}명 접속 중)",
+            f"❗ 현재 인원 수가 최대 인원({max_limit}명)을 초과했습니다. ({current_count}명 접속 중)",
             ephemeral=True
         )
         return
 
-    # 카테고리 이름 (없으면 "기타")
     category_name = voice_channel.category.name if voice_channel.category else "기타"
-    # 초대 코드 생성 (5분 유지, 최대 5회 사용)
     invite = await voice_channel.create_invite(max_age=300, max_uses=5, unique=True)
 
-    # 임베드 생성
     embed = discord.Embed(
         title="📢 구인 공고",
         description=f"{interaction.user.mention} 님이 멤버를 모집 중입니다!",
@@ -109,18 +101,26 @@ async def recruit(interaction: discord.Interaction, description: str):
     )
     embed.add_field(name="카테고리", value=f"【 {category_name} 】", inline=False)
     embed.add_field(name="채널명", value=f"[{voice_channel.name}]({invite.url})", inline=True)
-    embed.add_field(name="멤버 수", value=f"{current_count}명 / {MAXIMUM}명", inline=True)
+    embed.add_field(name="멤버 수", value=f"{current_count}명 / {max_limit}명", inline=True)
     embed.add_field(name="설명", value=description, inline=False)
 
     view = RecruitView(invite.url)
 
+    # ▶ 슬래시 응답 (숨김 메시지 아님)
     await interaction.response.send_message(
         embed=embed,
         view=view
     )
 
-    # 쿨타임 갱신
+    # ▶ 전체 알림 메시지
+    await interaction.channel.send(
+        content="@everyone 📢 새로운 구인 공고가 도착했습니다!",
+        embed=embed,
+        view=view
+    )
+
     cooldowns[user_id] = now
 
-# 봇 실행
+# ▶ 봇 실행
 bot.run(TOKEN)
+
