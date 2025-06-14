@@ -106,14 +106,8 @@ async def recruit(interaction: discord.Interaction, description: str):
 
     view = RecruitView(invite.url)
 
-    # ▶ 슬래시 응답 (숨김 메시지 아님)
+    # ▶ 메시지 1회 전송 (응답 + @everyone 포함)
     await interaction.response.send_message(
-        embed=embed,
-        view=view
-    )
-
-    # ▶ 전체 알림 메시지
-    await interaction.channel.send(
         content="@everyone 📢 새로운 구인 공고가 도착했습니다!",
         embed=embed,
         view=view
@@ -123,4 +117,3 @@ async def recruit(interaction: discord.Interaction, description: str):
 
 # ▶ 봇 실행
 bot.run(TOKEN)
-
